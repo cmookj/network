@@ -1,7 +1,7 @@
 # BUILD_TESTING variable is created by include(CTest)
 # It is set to ON by default
 if (BUILD_TESTING)
-    add_executable (project_test test_source.cpp)
+    add_executable (project_test test.cpp)
     target_link_libraries (project_test PRIVATE 
         network
         GTest::gtest_main)
