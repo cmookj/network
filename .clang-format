@@ -1,0 +1,43 @@
+---
+# We'll use defaults from the LLVM style.
+BasedOnStyle: LLVM
+IndentWidth: 4
+---
+Language: Cpp 
+# With a few tweaks.
+AccessModifierOffset: -4
+AlwaysBreakAfterReturnType: All
+AlignAfterOpenBracket: BlockIndent
+AlignArrayOfStructures: Left
+AlignConsecutiveAssignments:
+  Enabled: true 
+  AcrossEmptyLines: false 
+  AcrossComments: false 
+AlignConsecutiveDeclarations:
+  Enabled: true 
+  AcrossEmptyLines: false 
+  AcrossComments: false 
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse
+BinPackArguments: false 
+BinPackParameters: false
+BraceWrapping:
+  BeforeCatch: true
+  BeforeElse: true
+BreakConstructorInitializers: BeforeComma
+ColumnLimit: 100
+ExperimentalAutoDetectBinPacking: false 
+IndentAccessModifiers: false
+PointerAlignment: Left
+ReferenceAlignment: Left
+SpaceBeforeParens: Custom
+SpaceBeforeParensOptions:
+  AfterControlStatements: true
+  AfterFunctionDeclarationName: true
+  AfterFunctionDefinitionName: true
+  AfterOverloadedOperator: true
+  BeforeNonEmptyParentheses: true
+SpacesBeforeTrailingComments: 2
+---
+
