@@ -9,7 +9,9 @@
 
 #include "node.hpp"
 
+#include <deque>
 #include <memory>
+#include <utility>
 #include <vector>
 
 namespace gpw::foundation {
@@ -62,11 +64,14 @@ public:
 
     std::vector<std::string>
     path (const std::string& dst, const search_method method = search_method::depth) const {
-        // TODO: Implement breath-first search and connect to this interface.
         auto dst_ptr = _find_node (dst);
         if (dst_ptr == nullptr) return {};
 
-        return _depth_first_search (dst_ptr);
+        switch (method) {
+        case search_method::depth: return _depth_first_search (dst_ptr);
+
+        case search_method::breath: return _breath_first_search (dst_ptr);
+        }
     }
 
 private:
@@ -107,18 +112,76 @@ private:
     }
 
     bool
-    _depth_first_search (const node_ptr root, const node_ptr leaf, std::list<node_ptr>& stack)
+    _depth_first_search (const node_ptr root, const node_ptr dst, std::list<node_ptr>& stack)
         const {
-        if (root == leaf) return true;
+        if (root == dst) return true;
 
         for (const auto& child : root->edges()) {
             stack.push_back (child);
-            if (_depth_first_search (child, leaf, stack)) return true;
+            if (_depth_first_search (child, dst, stack)) return true;
 
             stack.pop_back();
         }
 
         return false;
+    }
+
+    using backtrackable = std::pair<node_ptr, node_ptr>;
+
+    std::vector<std::string>
+    _breath_first_search (const node_ptr dst) const {
+        std::vector<std::string> path;
+        std::deque<node_ptr>     queue;
+        std::list<backtrackable> node_pairs;
+
+        queue.push_front (_root);
+        // Root node does not have its parent.
+        node_pairs.push_back (std::make_pair (_root, nullptr));
+
+        if (_breath_first_search (dst, queue, node_pairs)) {
+            // Backtrack and build path
+            std::vector<std::string> backtrack;
+
+            node_ptr current = dst;
+            while (current != nullptr) {
+                backtrack.push_back (current->label());
+                auto backstep = std::find_if (
+                    node_pairs.cbegin(),
+                    node_pairs.cend(),
+                    [&current] (const auto& node_pair) {
+                        return std::get<0> (node_pair) == current;
+                    }
+                );
+
+                current = std::get<1> (*backstep);
+            }
+
+            std::copy (backtrack.crbegin(), backtrack.crend(), std::back_inserter (path));
+            return path;
+        }
+        return {};
+    }
+
+    bool
+    _breath_first_search (
+        const node_ptr            dst,
+        std::deque<node_ptr>&     queue,
+        std::list<backtrackable>& node_pairs
+    ) const {
+        auto current = queue.front();
+
+        if (current == dst) return true;
+
+        queue.pop_front();
+
+        for (const auto& child : current->edges()) {
+            node_pairs.push_back (std::make_pair (child, current));
+            queue.push_back (child);
+        }
+
+        if (queue.size() == 0) return false;
+
+        return _breath_first_search (dst, queue, node_pairs);
     }
 };
 

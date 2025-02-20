@@ -233,6 +233,16 @@ TEST (Tree, Search) {
     EXPECT_EQ (path[4], "E");
     EXPECT_EQ (path[5], "I");
 
+    auto path_b = tr.path ("I", tree<int>::search_method::breath);
+
+    EXPECT_EQ (path_b.size(), 6);
+
+    EXPECT_EQ (path_b[0], "O");
+    EXPECT_EQ (path_b[1], "N");
+    EXPECT_EQ (path_b[2], "J");
+    EXPECT_EQ (path_b[3], "L");
+    EXPECT_EQ (path_b[4], "E");
+    EXPECT_EQ (path_b[5], "I");
     //
     // A
     // |
@@ -277,6 +287,15 @@ TEST (Tree, Search) {
     EXPECT_EQ (path2[2], "F");
     EXPECT_EQ (path2[3], "K");
 
+    auto path2_b = tr2.path ("K", tree<int>::search_method::breath);
+
+    EXPECT_EQ (path2_b.size(), 4);
+
+    EXPECT_EQ (path2_b[0], "A");
+    EXPECT_EQ (path2_b[1], "B");
+    EXPECT_EQ (path2_b[2], "F");
+    EXPECT_EQ (path2_b[3], "K");
+
     auto path3 = tr2.path ("M");
 
     EXPECT_EQ (path3.size(), 4);
@@ -285,4 +304,13 @@ TEST (Tree, Search) {
     EXPECT_EQ (path3[1], "E");
     EXPECT_EQ (path3[2], "H");
     EXPECT_EQ (path3[3], "M");
+
+    auto path3_b = tr2.path ("M", tree<int>::search_method::breath);
+
+    EXPECT_EQ (path3_b.size(), 4);
+
+    EXPECT_EQ (path3_b[0], "A");
+    EXPECT_EQ (path3_b[1], "E");
+    EXPECT_EQ (path3_b[2], "H");
+    EXPECT_EQ (path3_b[3], "M");
 }
