@@ -11,6 +11,7 @@
 
 #include <memory>
 #include <numeric>
+#include <sstream>
 #include <string>
 
 namespace gpw::foundation {
@@ -86,6 +87,21 @@ public:
             0,
             [] (const size_t& acc, const auto& node) { return node->count_connections() + acc; }
         );
+    }
+
+    std::string
+    description () const {
+        std::stringstream strm;
+
+        for (const auto& node : _nodes) {
+            strm << node->label() << " : ";
+            for (const auto& edge : node->edges()) {
+                strm << edge->label() << ", ";
+            }
+            strm << '\n';
+        }
+
+        return strm.str();
     }
 
 private:
