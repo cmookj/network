@@ -154,9 +154,6 @@ TEST (Digraph, NodeConnection) {
     gr.connect_node ("O", "B");
     gr.connect_node ("O", "F");
 
-    EXPECT_EQ (1, 2);
-    std::cout << gr.description();
-
     EXPECT_TRUE (gr.is_connected ("A", "M"));
     EXPECT_TRUE (gr.is_connected ("C", "F"));
     EXPECT_TRUE (gr.is_connected ("D", "M"));
