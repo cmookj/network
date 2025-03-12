@@ -10,7 +10,6 @@
 #include "node.hpp"
 
 #include <deque>
-#include <memory>
 #include <utility>
 #include <vector>
 
@@ -22,16 +21,15 @@ namespace gpw::foundation {
  *
  */
 template <typename T> class tree {
-    using node_ptr = node<T>*;
+    using node_ptr       = node<T>*;
+    using const_node_ptr = const node<T>*;
 
     node_ptr _root;
 
-    // Because this tree is responsible for the resource management for all of
-    // its nodes, this class has a list of unique_ptrs of the nodes.
+    // Each node has pointers to other nodes (childrens) connected to it.
     // The connections between the nodes are saved using raw pointers, which
     // do not state the ownership between them.
-    // Each node has pointers to other nodes (childrens) connected to it.
-    std::list<std::unique_ptr<node<T>>> _nodes;
+    std::list<node<T>> _nodes;
 
 public:
     enum class search_method { depth, breath };
@@ -40,7 +38,7 @@ public:
 
     tree (const std::string& label, const T& data = T()) {
         _create_node (label, data);
-        _root = _nodes.begin()->get();
+        _root = &(*_nodes.begin());
     }
 
     virtual ~tree () {}
@@ -77,23 +75,28 @@ public:
 private:
     node_ptr
     _create_node (const std::string& label, const T& data) {
-        _nodes.emplace_back (std::make_unique<node<T>> (label, data));
-        return _nodes.back().get();
+        _nodes.emplace_back (node<T>{label, data});
+        return &_nodes.back();
     }
 
     node_ptr
+    _find_node (const std::string& label) {
+        return const_cast<node_ptr> (static_cast<const tree&> (*this)._find_node (label));
+    }
+
+    const_node_ptr
     _find_node (const std::string& label) const {
-        auto iter = std::find_if (_nodes.begin(), _nodes.end(), [&label] (auto& ptr) {
-            return ptr->label() == label;
+        auto iter = std::find_if (_nodes.begin(), _nodes.end(), [&label] (auto& node) {
+            return node.label() == label;
         });
 
         if (iter == _nodes.end()) return nullptr;
 
-        return iter->get();
+        return &(*iter);
     }
 
     std::vector<std::string>
-    _depth_first_search (const node_ptr dst) const {
+    _depth_first_search (const_node_ptr dst) const {
         std::vector<std::string> path;
         std::list<node_ptr>      stack;
         stack.push_back (_root);
@@ -112,7 +115,7 @@ private:
     }
 
     bool
-    _depth_first_search (const node_ptr root, const node_ptr dst, std::list<node_ptr>& stack)
+    _depth_first_search (const_node_ptr root, const_node_ptr dst, std::list<node_ptr>& stack)
         const {
         if (root == dst) return true;
 
@@ -129,7 +132,7 @@ private:
     using backtrackable = std::pair<node_ptr, node_ptr>;
 
     std::vector<std::string>
-    _breath_first_search (const node_ptr dst) const {
+    _breath_first_search (const_node_ptr dst) const {
         std::vector<std::string> path;
         std::deque<node_ptr>     queue;
         std::list<backtrackable> node_pairs;
@@ -142,7 +145,7 @@ private:
             // Backtrack and build path
             std::vector<std::string> backtrack;
 
-            node_ptr current = dst;
+            const_node_ptr current = dst;
             while (current != nullptr) {
                 backtrack.push_back (current->label());
                 auto backstep = std::find_if (
@@ -164,7 +167,7 @@ private:
 
     bool
     _breath_first_search (
-        const node_ptr            dst,
+        const_node_ptr            dst,
         std::deque<node_ptr>&     queue,
         std::list<backtrackable>& node_pairs
     ) const {
