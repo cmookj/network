@@ -72,6 +72,25 @@ public:
         }
     }
 
+    bool
+    is_ancestor_of (const std::string& label, const std::string& current_node_label) const {
+        return is_descendent_of (current_node_label, label);
+    }
+
+    bool
+    is_descendent_of (const std::string& label, const std::string& current_node_label) const {
+        auto current_node_ptr = _find_node (current_node_label);
+        if (current_node_ptr == nullptr) return false;
+
+        auto descendent_ptr = _find_node (label);
+        if (descendent_ptr == nullptr) return false;
+
+        std::list<const_node_ptr> stack;
+        stack.push_back (current_node_ptr);
+
+        return _depth_first_search (current_node_ptr, descendent_ptr, stack);
+    }
+
 private:
     node_ptr
     _create_node (const std::string& label, const T& data) {
@@ -97,8 +116,8 @@ private:
 
     std::vector<std::string>
     _depth_first_search (const_node_ptr dst) const {
-        std::vector<std::string> path;
-        std::list<node_ptr>      stack;
+        std::vector<std::string>  path;
+        std::list<const_node_ptr> stack;
         stack.push_back (_root);
 
         if (_depth_first_search (_root, dst, stack)) {
@@ -115,7 +134,7 @@ private:
     }
 
     bool
-    _depth_first_search (const_node_ptr root, const_node_ptr dst, std::list<node_ptr>& stack)
+    _depth_first_search (const_node_ptr root, const_node_ptr dst, std::list<const_node_ptr>& stack)
         const {
         if (root == dst) return true;
 

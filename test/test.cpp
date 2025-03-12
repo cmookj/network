@@ -243,6 +243,10 @@ TEST (Tree, Search) {
     EXPECT_EQ (path_b[3], "L");
     EXPECT_EQ (path_b[4], "E");
     EXPECT_EQ (path_b[5], "I");
+
+    EXPECT_TRUE (tr.is_ancestor_of ("N", "E"));
+    EXPECT_TRUE (tr.is_descendent_of ("E", "N"));
+
     //
     // A
     // |
