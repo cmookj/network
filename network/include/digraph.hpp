@@ -8,6 +8,7 @@
 #define __GPW_FOUNDATION_DIGRAPH__
 
 #include "node.hpp"
+#include "tree.hpp"
 
 #include <iterator>
 #include <numeric>
@@ -108,28 +109,81 @@ public:
     // The algorithm was proposed by R.E.Tarjan and the implementation is based on
     // the Christmas lecture by D.E.Knuth in 2024.
     //
-    using arc  = std::pair<std::string, std::string>;
-    using arcs = std::vector<arc>;
+    using arc    = std::pair<std::string, std::string>;
+    using arcs   = std::vector<arc>;
+    using forest = std::list<tree<T>>;
 
-    std::list<std::list<node<T>>>
-    strongly_connected_components () const {
-        std::list<std::list<node<T>>> scc;
+    // Depth-first forest algorithm
+    //
+    // 1. Set H <- the last node in the list (L).
+    // 2. Call find_strongly_connected_components (recursion)
+    // 3. If there no connected node to visit, group strongly connected components.
+    //
+    forest
+    make_depth_first_forest () const {
+        forest depth_first_forest;
 
-        std::list<node<T>> nodes = _nodes;
-        arcs               tree_arcs;
-        arcs               back_arcs;
-        arcs               loops;
-        arcs               fwd_arcs;
-        arcs               cross_arcs;
+        auto labeled_graph    = make_labeled_graph();
+        auto current_node_itr = labeled_graph.end() - 1;
+        arcs tree_arcs;
+        arcs back_arcs;
+        arcs loops;
+        arcs fwd_arcs;
+        arcs cross_arcs;
+        depth_first_forest.emplace_back (tree<T>{current_node_itr->label});
 
-        find_strongly_connected_components (
-            scc, nodes, tree_arcs, back_arcs, loops, fwd_arcs, cross_arcs
+        make_depth_first_forest (
+            labeled_graph,
+            depth_first_forest,
+            current_node_itr,
+            tree_arcs,
+            back_arcs,
+            loops,
+            fwd_arcs,
+            cross_arcs
         );
 
-        return scc;
+        return depth_first_forest;
     }
 
 private:
+    std::list<std::list<node<T>>>
+    scc_from_forest (
+        forest& depth_first_forest,
+        arcs&   tree_arcs,
+        arcs&   back_arcs,
+        arcs&   loops,
+        arcs&   fwd_arcs,
+        arcs&   cross_arcs
+    ) const {
+        // From the first tree
+    }
+
+    enum class node_status { pristine, visited, completed };
+
+    struct labeled_node {
+        node_status              status;
+        std::string              label;
+        std::vector<std::string> edges;
+    };
+
+    std::vector<labeled_node>
+    make_labeled_graph () const {
+        std::vector<labeled_node> labeled_graph;
+
+        for (const auto& node : _nodes) {
+            std::vector<std::string> edges;
+            for (const auto& edge : node.edges()) {
+                edges.push_back (edge->label());
+            }
+            labeled_graph.emplace_back (
+                labeled_node{node_status::pristine, node.label(), std::move (edges)}
+            );
+        }
+
+        return labeled_graph;
+    }
+
     node_itr
     node_with_label (const std::string& label) {
         auto cit = static_cast<const digraph*> (this)->node_with_label (label);
@@ -143,19 +197,110 @@ private:
         });
     }
 
-    // Depth-first forest algorithm
     //
-    // Begining from
+    // If current node's status is 'completed'
+    //   If there exists 'visited' node in the node list
+    //     Current node <- 'visited' node found, and recurse
+    //   Otherwise,
+    //     If there is no 'pristine' node in the list
+    //       Terminate this algorithm
+    //     Otherwise,
+    //       Change the `pristine` nodeh to 'visited' and create a new tree
+    //
+    // Otherwise,
+    //   Mark the next connected node (T) as 'visited'
+    //   Classify the new arc:
+    //     If the node (T) is a new visit, it is "tree arc."
+    //     Otherwise,
+    //       If the node (T) is an ancestor of the node (H), it is "back arc."
+    //       If the node (T) is the same as the node (H), it is "loop arc."
+    //       If the node (T) is a descendant of the node (H), it is "forward arc."
+    //       Otherwise, it is "cross arc."
+    //  Set current_node <- T, and go to 2.
+    //
+    using lnode_itr = typename std::vector<labeled_node>::iterator;
+
     void
-    find_strongly_connected_components (
-        std::list<std::list<node<T>>>& scc,
-        std::list<node<T>>&            nodes,
-        arcs&                          tree_arcs,
-        arcs&                          back_arcs,
-        arcs&                          loops,
-        arcs&                          fwd_arcs,
-        arcs&                          cross_arcs
-    ) const {}
+    make_depth_first_forest (
+        std::vector<labeled_node>& nodes,
+        forest&                    depth_first_forest,
+        lnode_itr                  current_node_itr,
+        arcs&                      tree_arcs,
+        arcs&                      back_arcs,
+        arcs&                      loops,
+        arcs&                      fwd_arcs,
+        arcs&                      cross_arcs
+    ) const {
+        // If current node is completed, find the next incomplete from the back.
+        // If all the nodes are completed, return.
+        if (current_node_itr->status == node_status::completed) {
+            auto visited_itr = std::find_if (nodes.rbegin(), nodes.rend(), [] (const auto& node) {
+                return node.status == node_status::visited;
+            });
+
+            if (visited_itr != nodes.rend())
+                make_depth_first_forest (
+                    nodes,
+                    depth_first_forest,
+                    visited_itr.base() - 1,
+                    tree_arcs,
+                    back_arcs,
+                    loops,
+                    fwd_arcs,
+                    cross_arcs
+                );
+
+            auto pristine_itr = std::find_if (nodes.begin(), nodes.end(), [] (const auto& node) {
+                return node.status == node_status::pristine;
+            });
+
+            if (pristine_itr == nodes.end()) return;
+
+            pristine_itr->status = node_status::visited;
+            // Create a new tree
+            depth_first_forest.emplace_back (tree<T>{pristine_itr->label});
+        } else {
+            for (auto& edge_label : current_node_itr->edges) {
+                auto itr =
+                    std::find_if (nodes.begin(), nodes.end(), [&edge_label] (const auto& node) {
+                        return node.label == edge_label;
+                    });
+                // New visit, tree arc.
+                if (itr->status == node_status::pristine) {
+                    tree_arcs.emplace_back (std::make_pair (current_node_itr->label, itr->label));
+                    depth_first_forest.back().append_node (current_node_itr->label, itr->label);
+                } else {
+                    if (depth_first_forest.back().is_ancestor_of (
+                            itr->label, current_node_itr->label
+                        )) {
+                        back_arcs.emplace_back (std::make_pair (current_node_itr->label, itr->label)
+                        );
+                    } else if (current_node_itr == itr) {
+                        loops.emplace_back (std::make_pair (current_node_itr->label, itr->label));
+                    } else if (depth_first_forest.back().is_descendent_of (
+                                   itr->label, current_node_itr->label
+                               )) {
+                        fwd_arcs.emplace_back (std::make_pair (current_node_itr->label, itr->label)
+                        );
+                    } else {
+                        cross_arcs.emplace_back (
+                            std::make_pair (current_node_itr->label, itr->label)
+                        );
+                    }
+                }
+                make_depth_first_forest (
+                    nodes,
+                    depth_first_forest,
+                    itr,
+                    tree_arcs,
+                    back_arcs,
+                    loops,
+                    fwd_arcs,
+                    cross_arcs
+                );
+            }
+        }
+    }
 };
 
 }  // namespace gpw::foundation

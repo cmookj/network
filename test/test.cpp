@@ -179,6 +179,105 @@ TEST (Digraph, NodeConnection) {
     EXPECT_TRUE (gr.is_connected ("O", "F"));
 
     EXPECT_EQ (gr.count_connections(), 23);
+
+#if false
+    auto labeled_graph = gr.make_labeled_graph();
+    EXPECT_EQ (labeled_graph[0].label, "A");
+    EXPECT_EQ (labeled_graph[1].label, "B");
+    EXPECT_EQ (labeled_graph[2].label, "C");
+    EXPECT_EQ (labeled_graph[3].label, "D");
+    EXPECT_EQ (labeled_graph[4].label, "E");
+    EXPECT_EQ (labeled_graph[5].label, "F");
+    EXPECT_EQ (labeled_graph[6].label, "G");
+    EXPECT_EQ (labeled_graph[7].label, "H");
+    EXPECT_EQ (labeled_graph[8].label, "I");
+    EXPECT_EQ (labeled_graph[9].label, "J");
+    EXPECT_EQ (labeled_graph[10].label, "K");
+    EXPECT_EQ (labeled_graph[11].label, "L");
+    EXPECT_EQ (labeled_graph[12].label, "M");
+    EXPECT_EQ (labeled_graph[13].label, "N");
+    EXPECT_EQ (labeled_graph[14].label, "O");
+
+    EXPECT_EQ (labeled_graph[0].edges[0], "M");
+    EXPECT_EQ (labeled_graph[2].edges[0], "F");
+    EXPECT_EQ (labeled_graph[3].edges[0], "M");
+    EXPECT_EQ (labeled_graph[4].edges[0], "I");
+
+    EXPECT_EQ (labeled_graph[5].edges[0], "C");
+    EXPECT_EQ (labeled_graph[5].edges[1], "L");
+
+    EXPECT_EQ (labeled_graph[6].edges[0], "K");
+
+    EXPECT_EQ (labeled_graph[7].edges[0], "G");
+    EXPECT_EQ (labeled_graph[7].edges[1], "C");
+
+    EXPECT_EQ (labeled_graph[8].edges[0], "I");
+
+    EXPECT_EQ (labeled_graph[9].edges[0], "L");
+    EXPECT_EQ (labeled_graph[9].edges[1], "B");
+
+    EXPECT_EQ (labeled_graph[10].edges[0], "H");
+    EXPECT_EQ (labeled_graph[10].edges[1], "N");
+
+    EXPECT_EQ (labeled_graph[11].edges[0], "J");
+    EXPECT_EQ (labeled_graph[11].edges[1], "E");
+
+    EXPECT_EQ (labeled_graph[12].edges[0], "A");
+    EXPECT_EQ (labeled_graph[12].edges[1], "D");
+    EXPECT_EQ (labeled_graph[12].edges[2], "O");
+
+    EXPECT_EQ (labeled_graph[13].edges[0], "J");
+
+    EXPECT_EQ (labeled_graph[14].edges[0], "N");
+    EXPECT_EQ (labeled_graph[14].edges[1], "B");
+    EXPECT_EQ (labeled_graph[14].edges[2], "F");
+#endif
+}
+
+TEST (Digraph, StronglyConnectedComponents) {
+    digraph<int> gr;
+
+    gr.create_node ("A");
+    gr.create_node ("B");
+    gr.create_node ("C");
+    gr.create_node ("D");
+    gr.create_node ("E");
+    gr.create_node ("F");
+    gr.create_node ("G");
+    gr.create_node ("H");
+    gr.create_node ("I");
+    gr.create_node ("J");
+    gr.create_node ("K");
+    gr.create_node ("L");
+    gr.create_node ("M");
+    gr.create_node ("N");
+    gr.create_node ("O");
+
+    gr.connect_node ("A", "M");
+    gr.connect_node ("C", "F");
+    gr.connect_node ("D", "M");
+    gr.connect_node ("E", "I");
+    gr.connect_node ("F", "C");
+    gr.connect_node ("F", "L");
+    gr.connect_node ("G", "K");
+    gr.connect_node ("H", "G");
+    gr.connect_node ("H", "C");
+    gr.connect_node ("I", "I");
+    gr.connect_node ("J", "L");
+    gr.connect_node ("J", "B");
+    gr.connect_node ("K", "H");
+    gr.connect_node ("K", "N");
+    gr.connect_node ("L", "J");
+    gr.connect_node ("L", "E");
+    gr.connect_node ("M", "A");
+    gr.connect_node ("M", "D");
+    gr.connect_node ("M", "O");
+    gr.connect_node ("N", "J");
+    gr.connect_node ("O", "N");
+    gr.connect_node ("O", "B");
+    gr.connect_node ("O", "F");
+
+    gr.make_depth_first_forest();
 }
 
 TEST (Tree, Creation) {
