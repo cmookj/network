@@ -3,7 +3,9 @@
 
 #include <algorithm>
 #include <list>
+#include <sstream>
 #include <string>
+#include <vector>
 
 namespace gpw::foundation {
 
@@ -57,7 +59,7 @@ public:
 
     void
     disconnect (const std::string& label) {
-        _edges.remove_if ([&label] (auto& node_ptr) { return node_ptr->_label == label; });
+        std::erase_if (_edges, [&label] (auto& node_ptr) { return node_ptr->_label == label; });
     }
 
     size_t
@@ -70,6 +72,37 @@ public:
         if (std::find (_edges.cbegin(), _edges.cend(), &node) == _edges.cend()) return false;
 
         return true;
+    }
+
+    std::string
+    description (bool recursion = false) const noexcept {
+        std::vector<std::string> connected_labels;
+        std::transform (
+            _edges.cbegin(),
+            _edges.cend(),
+            std::back_inserter (connected_labels),
+            [] (const auto& ptr) { return ptr->label(); }
+        );
+
+        std::stringstream strm;
+        strm << _label << " : ";
+        strm << '{';
+        if (connected_labels.cbegin() != connected_labels.cend()) {
+            auto last = connected_labels.cend() - 1;
+            std::copy (
+                connected_labels.cbegin(), last, std::ostream_iterator<std::string> (strm, ", ")
+            );
+            strm << *last;
+        }
+        strm << "}\n";
+
+        if (recursion) {
+            for (const auto& ptr : _edges) {
+                strm << ptr->description (recursion);
+            }
+        }
+
+        return strm.str();
     }
 };
 

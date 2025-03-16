@@ -11,6 +11,7 @@
 #include "tree.hpp"
 
 #include <iterator>
+#include <list>
 #include <numeric>
 #include <sstream>
 #include <string>

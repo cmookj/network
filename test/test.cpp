@@ -381,6 +381,10 @@ TEST (Tree, Search) {
 
     tr2.append_node ("M", "N");
 
+    EXPECT_EQ (1, 0);
+    std::cout << "Tree size: " << tr2.size() << '\n';
+    std::cout << tr2.description() << '\n';
+
     auto path2 = tr2.path ("K");
 
     EXPECT_EQ (path2.size(), 4);

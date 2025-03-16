@@ -10,6 +10,7 @@
 #include "node.hpp"
 
 #include <deque>
+#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -89,6 +90,15 @@ public:
         stack.push_back (current_node_ptr);
 
         return _depth_first_search (current_node_ptr, descendent_ptr, stack);
+    }
+
+    std::string
+    description () const {
+        std::stringstream strm;
+
+        strm << _root->description (true) << '\n';
+
+        return strm.str();
     }
 
 private:
