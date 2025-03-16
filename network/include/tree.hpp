@@ -97,9 +97,6 @@ public:
         std::stringstream strm;
 
         strm << _root->description (true) << '\n';
-        /*for (const auto& child : _root->edges()) {*/
-        /*    strm << child->description() << '\n';*/
-        /*}*/
 
         return strm.str();
     }
