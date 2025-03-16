@@ -9,7 +9,7 @@
 
 #include "node.hpp"
 
-#include <memory>
+#include <list>
 #include <numeric>
 #include <string>
 
