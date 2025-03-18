@@ -16,6 +16,7 @@
 #endif
 
 #include <deque>
+#include <list>
 #include <sstream>
 #include <utility>
 #include <vector>
@@ -31,7 +32,7 @@ template <typename T> class tree {
     using node_ptr       = node<T>*;
     using const_node_ptr = const node<T>*;
 
-    node_ptr _root;
+    // node_ptr _root;
 
     // Each node has pointers to other nodes (childrens) connected to it.
     // The connections between the nodes are saved using raw pointers, which
@@ -45,11 +46,11 @@ public:
 
     tree (const std::string& label, const T& data = T()) {
         _create_node (label, data);
-        _root = &(*_nodes.begin());
+        // _root = &(*_nodes.begin());
 
 #ifdef __DEBUG_LOGGING__
         std::cout << "New tree is created\n";
-        std::cout << " - Root label: " << _root->label() << '\n';
+        std::cout << " - Root label: " << root().label() << '\n';
 #endif
     }
 
@@ -58,6 +59,16 @@ public:
     size_t
     size () const noexcept {
         return _nodes.size();
+    }
+
+    const node<T>&
+    root () const noexcept {
+        return _nodes.front();
+    }
+
+    node<T>&
+    root () noexcept {
+        return _nodes.front();
     }
 
     void
@@ -120,9 +131,8 @@ public:
         std::stringstream strm;
 
         strm << "# nodes: " << size() << '\n';
-        strm << "Root: " << _root->label() << '\n';
-        strm << "1st node: " << _nodes.front().label() << '\n';
-        strm << _root->description (true) << '\n';
+        strm << "Root: " << root().label() << '\n';
+        strm << root().description (true) << '\n';
 
         return strm.str();
     }
@@ -159,9 +169,10 @@ private:
     _depth_first_search (const_node_ptr dst) const noexcept {
         std::vector<std::string>  path;
         std::list<const_node_ptr> stack;
-        stack.push_back (_root);
+        const_node_ptr            root_ptr = &root();
+        stack.push_back (root_ptr);
 
-        if (_depth_first_search (_root, dst, stack)) {
+        if (_depth_first_search (root_ptr, dst, stack)) {
             std::transform (
                 stack.cbegin(),
                 stack.cend(),
@@ -189,17 +200,18 @@ private:
         return false;
     }
 
-    using backtrackable = std::pair<node_ptr, node_ptr>;
+    using backtrackable = std::pair<const_node_ptr, const_node_ptr>;
 
     std::vector<std::string>
     _breath_first_search (const_node_ptr dst) const noexcept {
-        std::vector<std::string> path;
-        std::deque<node_ptr>     queue;
-        std::list<backtrackable> node_pairs;
+        std::vector<std::string>   path;
+        std::deque<const_node_ptr> queue;
+        std::list<backtrackable>   node_pairs;
+        const_node_ptr             root_ptr = &root();
 
-        queue.push_front (_root);
+        queue.push_front (root_ptr);
         // Root node does not have its parent.
-        node_pairs.push_back (std::make_pair (_root, nullptr));
+        node_pairs.push_back (std::make_pair (root_ptr, nullptr));
 
         if (_breath_first_search (dst, queue, node_pairs)) {
             // Backtrack and build path
@@ -227,9 +239,9 @@ private:
 
     bool
     _breath_first_search (
-        const_node_ptr            dst,
-        std::deque<node_ptr>&     queue,
-        std::list<backtrackable>& node_pairs
+        const_node_ptr              dst,
+        std::deque<const_node_ptr>& queue,
+        std::list<backtrackable>&   node_pairs
     ) const noexcept {
         auto current = queue.front();
 
