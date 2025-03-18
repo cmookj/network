@@ -10,6 +10,11 @@
 #include "node.hpp"
 #include "tree.hpp"
 
+#ifdef __DEBUG_LOGGING__
+#include <iostream>
+#endif
+
+#include <array>
 #include <iterator>
 #include <list>
 #include <numeric>
@@ -110,9 +115,17 @@ public:
     // The algorithm was proposed by R.E.Tarjan and the implementation is based on
     // the Christmas lecture by D.E.Knuth in 2024.
     //
-    using arc    = std::pair<std::string, std::string>;
-    using arcs   = std::vector<arc>;
-    using forest = std::list<tree<T>>;
+    using arc  = std::array<std::string, 2>;
+    using arcs = std::vector<arc>;
+
+    struct forest {
+        std::list<tree<T>> trees;
+        std::vector<arc>   tree_arcs;
+        std::vector<arc>   back_arcs;
+        std::vector<arc>   fwd_arcs;
+        std::vector<arc>   cross_arcs;
+        std::vector<arc>   loops;
+    };
 
     // Depth-first forest algorithm
     //
@@ -122,48 +135,37 @@ public:
     //
     forest
     make_depth_first_forest () const {
-        forest depth_first_forest;
+        forest dfforest;
 
-        auto labeled_graph    = make_labeled_graph();
-        auto current_node_itr = labeled_graph.end() - 1;
-        arcs tree_arcs;
-        arcs back_arcs;
-        arcs loops;
-        arcs fwd_arcs;
-        arcs cross_arcs;
-        depth_first_forest.emplace_back (tree<T>{current_node_itr->label});
+        auto labeled_nodes        = make_labeled_graph();
+        auto current_node_itr     = labeled_nodes.end() - 1;
+        int  count_explored_nodes = 0;
 
-        make_depth_first_forest (
-            labeled_graph,
-            depth_first_forest,
-            current_node_itr,
-            tree_arcs,
-            back_arcs,
-            loops,
-            fwd_arcs,
-            cross_arcs
-        );
+        do {
+            search_for_new_tree (labeled_nodes, dfforest);
+            count_explored_nodes =
+                std::count_if (labeled_nodes.cbegin(), labeled_nodes.cend(), [] (const auto& node) {
+                    return node.completed == true;
+                });
+        } while (_nodes.size() != count_explored_nodes);
 
-        return depth_first_forest;
+#ifdef __DEBUG_LOGGING__
+        for (const auto& tree : dfforest.trees) {
+            std::cout << tree.description() << '\n';
+        }
+#endif
+
+        return dfforest;
     }
 
 private:
     std::list<std::list<node<T>>>
-    scc_from_forest (
-        forest& depth_first_forest,
-        arcs&   tree_arcs,
-        arcs&   back_arcs,
-        arcs&   loops,
-        arcs&   fwd_arcs,
-        arcs&   cross_arcs
-    ) const {
+    scc_from_forest (forest& dfforest) const {
         // From the first tree
     }
 
-    enum class node_status { pristine, visited, completed };
-
     struct labeled_node {
-        node_status              status;
+        bool                     completed;
         std::string              label;
         std::vector<std::string> edges;
     };
@@ -177,9 +179,7 @@ private:
             for (const auto& edge : node.edges()) {
                 edges.push_back (edge->label());
             }
-            labeled_graph.emplace_back (
-                labeled_node{node_status::pristine, node.label(), std::move (edges)}
-            );
+            labeled_graph.emplace_back (labeled_node{false, node.label(), std::move (edges)});
         }
 
         return labeled_graph;
@@ -198,17 +198,62 @@ private:
         });
     }
 
-    //
-    // If current node's status is 'completed'
-    //   If there exists 'visited' node in the node list
-    //     Current node <- 'visited' node found, and recurse
-    //   Otherwise,
-    //     If there is no 'pristine' node in the list
-    //       Terminate this algorithm
-    //     Otherwise,
-    //       Change the `pristine` nodeh to 'visited' and create a new tree
-    //
-    // Otherwise,
+    bool
+    is_node_visited (const std::string& label, const forest& dff) const noexcept {
+        for (const auto& tree : dff.trees) {
+            if (tree.contains_node (label)) return true;
+        }
+        return false;
+    }
+
+    using lnode_itr = typename std::vector<labeled_node>::iterator;
+
+    void
+    make_depth_first_forest (
+        std::vector<labeled_node>& nodes,
+        forest&                    dfforest,
+        lnode_itr                  current_itr
+    ) const {
+        if (!current_itr->completed) {
+            explore_depth_first (nodes, dfforest, current_itr);
+            current_itr->completed = true;
+        }
+    }
+
+    void
+    search_for_new_tree (std::vector<labeled_node>& nodes, forest& dfforest) const {
+        auto incomplete = std::find_if (nodes.rbegin(), nodes.rend(), [] (const auto& node) {
+            return node.completed == false;
+        });
+        if (incomplete == nodes.rend()) return;
+
+// Create a new tree
+#ifdef __DEBUG_LOGGING__
+        if (dfforest.trees.size() > 0)
+            std::cout << "The previous tree info:\n" << dfforest.trees.back().description() << '\n';
+#endif
+        dfforest.trees.emplace_back (tree<T>{incomplete->label});
+#ifdef __DEBUG_LOGGING__
+        std::cout << "New tree with root: " << incomplete->label << '\n';
+#endif
+        lnode_itr itr = incomplete.base();
+        make_depth_first_forest (nodes, dfforest, itr - 1);
+    }
+
+    void
+    explore_depth_first (std::vector<labeled_node>& nodes, forest& dfforest, lnode_itr current_itr)
+        const {
+        for (auto& edge_label : current_itr->edges) {
+            auto itr = std::find_if (nodes.begin(), nodes.end(), [&edge_label] (const auto& node) {
+                return node.label == edge_label;
+            });
+
+            bool need_exploration = classify_arc (nodes, dfforest, itr, current_itr);
+            if (need_exploration) make_depth_first_forest (nodes, dfforest, itr);
+        }
+        current_itr->completed = true;
+    }
+
     //   Mark the next connected node (T) as 'visited'
     //   Classify the new arc:
     //     If the node (T) is a new visit, it is "tree arc."
@@ -217,90 +262,43 @@ private:
     //       If the node (T) is the same as the node (H), it is "loop arc."
     //       If the node (T) is a descendant of the node (H), it is "forward arc."
     //       Otherwise, it is "cross arc."
-    //  Set current_node <- T, and go to 2.
-    //
-    using lnode_itr = typename std::vector<labeled_node>::iterator;
-
-    void
-    make_depth_first_forest (
+    bool
+    classify_arc (
         std::vector<labeled_node>& nodes,
-        forest&                    depth_first_forest,
-        lnode_itr                  current_node_itr,
-        arcs&                      tree_arcs,
-        arcs&                      back_arcs,
-        arcs&                      loops,
-        arcs&                      fwd_arcs,
-        arcs&                      cross_arcs
+        forest&                    dfforest,
+        lnode_itr                  itr,
+        lnode_itr                  current_itr
     ) const {
-        // If current node is completed, find the next incomplete from the back.
-        // If all the nodes are completed, return.
-        if (current_node_itr->status == node_status::completed) {
-            auto visited_itr = std::find_if (nodes.rbegin(), nodes.rend(), [] (const auto& node) {
-                return node.status == node_status::visited;
-            });
-
-            if (visited_itr != nodes.rend())
-                make_depth_first_forest (
-                    nodes,
-                    depth_first_forest,
-                    visited_itr.base() - 1,
-                    tree_arcs,
-                    back_arcs,
-                    loops,
-                    fwd_arcs,
-                    cross_arcs
-                );
-
-            auto pristine_itr = std::find_if (nodes.begin(), nodes.end(), [] (const auto& node) {
-                return node.status == node_status::pristine;
-            });
-
-            if (pristine_itr == nodes.end()) return;
-
-            pristine_itr->status = node_status::visited;
-            // Create a new tree
-            depth_first_forest.emplace_back (tree<T>{pristine_itr->label});
+        // New visit, tree arc.
+        if (!is_node_visited (itr->label, dfforest)) {
+            dfforest.tree_arcs.emplace_back (
+                std::array<std::string, 2>{current_itr->label, itr->label}
+            );
+            dfforest.trees.back().append_node (current_itr->label, itr->label);
+#ifdef __DEBUG_LOGGING__
+            std::cout << "New edge in tree: " << current_itr->label << " -> " << itr->label << '\n';
+#endif
+            return true;
         } else {
-            for (auto& edge_label : current_node_itr->edges) {
-                auto itr =
-                    std::find_if (nodes.begin(), nodes.end(), [&edge_label] (const auto& node) {
-                        return node.label == edge_label;
-                    });
-                // New visit, tree arc.
-                if (itr->status == node_status::pristine) {
-                    tree_arcs.emplace_back (std::make_pair (current_node_itr->label, itr->label));
-                    depth_first_forest.back().append_node (current_node_itr->label, itr->label);
-                } else {
-                    if (depth_first_forest.back().is_ancestor_of (
-                            itr->label, current_node_itr->label
-                        )) {
-                        back_arcs.emplace_back (std::make_pair (current_node_itr->label, itr->label)
-                        );
-                    } else if (current_node_itr == itr) {
-                        loops.emplace_back (std::make_pair (current_node_itr->label, itr->label));
-                    } else if (depth_first_forest.back().is_descendent_of (
-                                   itr->label, current_node_itr->label
-                               )) {
-                        fwd_arcs.emplace_back (std::make_pair (current_node_itr->label, itr->label)
-                        );
-                    } else {
-                        cross_arcs.emplace_back (
-                            std::make_pair (current_node_itr->label, itr->label)
-                        );
-                    }
-                }
-                make_depth_first_forest (
-                    nodes,
-                    depth_first_forest,
-                    itr,
-                    tree_arcs,
-                    back_arcs,
-                    loops,
-                    fwd_arcs,
-                    cross_arcs
+            if (dfforest.trees.back().is_ancestor_of (itr->label, current_itr->label)) {
+                dfforest.back_arcs.emplace_back (
+                    std::array<std::string, 2>{current_itr->label, itr->label}
+                );
+            } else if (current_itr == itr) {
+                dfforest.loops.emplace_back (
+                    std::array<std::string, 2>{current_itr->label, itr->label}
+                );
+            } else if (dfforest.trees.back().is_descendent_of (itr->label, current_itr->label)) {
+                dfforest.fwd_arcs.emplace_back (
+                    std::array<std::string, 2>{current_itr->label, itr->label}
+                );
+            } else {
+                dfforest.cross_arcs.emplace_back (
+                    std::array<std::string, 2>{current_itr->label, itr->label}
                 );
             }
         }
+        return false;
     }
 };
 

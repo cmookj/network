@@ -9,6 +9,12 @@
 
 #include "node.hpp"
 
+#define __DEBUG_LOGGING__
+
+#ifdef __DEBUG_LOGGING__
+#include <iostream>
+#endif
+
 #include <deque>
 #include <sstream>
 #include <utility>
@@ -40,17 +46,26 @@ public:
     tree (const std::string& label, const T& data = T()) {
         _create_node (label, data);
         _root = &(*_nodes.begin());
+
+#ifdef __DEBUG_LOGGING__
+        std::cout << "New tree is created\n";
+        std::cout << " - Root label: " << _root->label() << '\n';
+#endif
     }
 
     virtual ~tree () {}
 
     size_t
-    size () const {
+    size () const noexcept {
         return _nodes.size();
     }
 
     void
-    append_node (const std::string& parent_label, const std::string& label, const T& data = T()) {
+    append_node (
+        const std::string& parent_label,
+        const std::string& label,
+        const T&           data = T()
+    ) noexcept {
         // If the node already exists in the tree, do nothing.
         if (_find_node (label)) return;
 
@@ -59,10 +74,16 @@ public:
 
         auto new_node_ptr = _create_node (label, data);
         parent_ptr->connect (*new_node_ptr);
+
+#ifdef __DEBUG_LOGGING__
+        std::cout << "New node added: " << parent_ptr->label() << " -> " << new_node_ptr->label()
+                  << '\n';
+#endif
     }
 
     std::vector<std::string>
-    path (const std::string& dst, const search_method method = search_method::depth) const {
+    path (const std::string& dst, const search_method method = search_method::depth)
+        const noexcept {
         auto dst_ptr = _find_node (dst);
         if (dst_ptr == nullptr) return {};
 
@@ -74,12 +95,14 @@ public:
     }
 
     bool
-    is_ancestor_of (const std::string& label, const std::string& current_node_label) const {
+    is_ancestor_of (const std::string& label, const std::string& current_node_label)
+        const noexcept {
         return is_descendent_of (current_node_label, label);
     }
 
     bool
-    is_descendent_of (const std::string& label, const std::string& current_node_label) const {
+    is_descendent_of (const std::string& label, const std::string& current_node_label)
+        const noexcept {
         auto current_node_ptr = _find_node (current_node_label);
         if (current_node_ptr == nullptr) return false;
 
@@ -93,28 +116,36 @@ public:
     }
 
     std::string
-    description () const {
+    description () const noexcept {
         std::stringstream strm;
 
+        strm << "# nodes: " << size() << '\n';
+        strm << "Root: " << _root->label() << '\n';
+        strm << "1st node: " << _nodes.front().label() << '\n';
         strm << _root->description (true) << '\n';
 
         return strm.str();
     }
 
+    bool
+    contains_node (const std::string& label) const noexcept {
+        return _find_node (label) != nullptr;
+    }
+
 private:
     node_ptr
-    _create_node (const std::string& label, const T& data) {
+    _create_node (const std::string& label, const T& data) noexcept {
         _nodes.emplace_back (node<T>{label, data});
         return &_nodes.back();
     }
 
     node_ptr
-    _find_node (const std::string& label) {
+    _find_node (const std::string& label) noexcept {
         return const_cast<node_ptr> (static_cast<const tree&> (*this)._find_node (label));
     }
 
     const_node_ptr
-    _find_node (const std::string& label) const {
+    _find_node (const std::string& label) const noexcept {
         auto iter = std::find_if (_nodes.begin(), _nodes.end(), [&label] (auto& node) {
             return node.label() == label;
         });
@@ -125,7 +156,7 @@ private:
     }
 
     std::vector<std::string>
-    _depth_first_search (const_node_ptr dst) const {
+    _depth_first_search (const_node_ptr dst) const noexcept {
         std::vector<std::string>  path;
         std::list<const_node_ptr> stack;
         stack.push_back (_root);
@@ -145,7 +176,7 @@ private:
 
     bool
     _depth_first_search (const_node_ptr root, const_node_ptr dst, std::list<const_node_ptr>& stack)
-        const {
+        const noexcept {
         if (root == dst) return true;
 
         for (const auto& child : root->edges()) {
@@ -161,7 +192,7 @@ private:
     using backtrackable = std::pair<node_ptr, node_ptr>;
 
     std::vector<std::string>
-    _breath_first_search (const_node_ptr dst) const {
+    _breath_first_search (const_node_ptr dst) const noexcept {
         std::vector<std::string> path;
         std::deque<node_ptr>     queue;
         std::list<backtrackable> node_pairs;
@@ -199,7 +230,7 @@ private:
         const_node_ptr            dst,
         std::deque<node_ptr>&     queue,
         std::list<backtrackable>& node_pairs
-    ) const {
+    ) const noexcept {
         auto current = queue.front();
 
         if (current == dst) return true;

@@ -277,7 +277,18 @@ TEST (Digraph, StronglyConnectedComponents) {
     gr.connect_node ("O", "B");
     gr.connect_node ("O", "F");
 
-    gr.make_depth_first_forest();
+    auto dff = gr.make_depth_first_forest();
+    EXPECT_EQ (dff.trees.size(), 3);
+
+    EXPECT_EQ (0, 1);
+    for (const auto& tree : dff.trees) {
+        std::cout << tree.description() << '\n';
+    }
+
+    std::cout << "Tree Arcs\n";
+    for (const auto& arc : dff.tree_arcs) {
+        std::cout << arc[0] << " -> " << arc[1] << '\n';
+    }
 }
 
 TEST (Tree, Creation) {
@@ -381,9 +392,9 @@ TEST (Tree, Search) {
 
     tr2.append_node ("M", "N");
 
-    EXPECT_EQ (1, 0);
-    std::cout << "Tree size: " << tr2.size() << '\n';
-    std::cout << tr2.description() << '\n';
+    // EXPECT_EQ (1, 0);
+    // std::cout << "Tree size: " << tr2.size() << '\n';
+    // std::cout << tr2.description() << '\n';
 
     auto path2 = tr2.path ("K");
 
