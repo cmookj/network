@@ -280,7 +280,7 @@ TEST (Digraph, StronglyConnectedComponents) {
     auto dff = gr.make_depth_first_forest();
     EXPECT_EQ (dff.trees.size(), 3);
 
-    // EXPECT_EQ (0, 1);
+    EXPECT_EQ (0, 1);
     for (const auto& tree : dff.trees) {
         std::cout << tree.description() << '\n';
     }

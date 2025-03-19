@@ -137,17 +137,17 @@ public:
     make_depth_first_forest () const {
         forest dfforest;
 
-        auto labeled_nodes        = make_labeled_graph();
-        auto current_node_itr     = labeled_nodes.end() - 1;
-        int  count_explored_nodes = 0;
+        auto labeled_nodes         = make_labeled_graph();
+        auto current_node_itr      = labeled_nodes.end() - 1;
+        int  count_completed_nodes = 0;
 
         do {
             search_for_new_tree (labeled_nodes, dfforest);
-            count_explored_nodes =
+            count_completed_nodes =
                 std::count_if (labeled_nodes.cbegin(), labeled_nodes.cend(), [] (const auto& node) {
                     return node.completed == true;
                 });
-        } while (_nodes.size() != count_explored_nodes);
+        } while (_nodes.size() != count_completed_nodes);
 
 #ifdef __DEBUG_LOGGING__
         for (const auto& tree : dfforest.trees) {
@@ -209,13 +209,18 @@ private:
     using lnode_itr = typename std::vector<labeled_node>::iterator;
 
     void
-    make_depth_first_forest (
-        std::vector<labeled_node>& nodes,
-        forest&                    dfforest,
-        lnode_itr                  current_itr
-    ) const {
+    explore_depth_first (std::vector<labeled_node>& nodes, forest& dfforest, lnode_itr current_itr)
+        const {
         if (!current_itr->completed) {
-            explore_depth_first (nodes, dfforest, current_itr);
+            for (auto& edge_label : current_itr->edges) {
+                auto itr =
+                    std::find_if (nodes.begin(), nodes.end(), [&edge_label] (const auto& node) {
+                        return node.label == edge_label;
+                    });
+
+                bool need_exploration = classify_arc (nodes, dfforest, itr, current_itr);
+                if (need_exploration) explore_depth_first (nodes, dfforest, itr);
+            }
             current_itr->completed = true;
         }
     }
@@ -237,21 +242,7 @@ private:
         std::cout << "New tree with root: " << incomplete->label << '\n';
 #endif
         lnode_itr itr = incomplete.base();
-        make_depth_first_forest (nodes, dfforest, itr - 1);
-    }
-
-    void
-    explore_depth_first (std::vector<labeled_node>& nodes, forest& dfforest, lnode_itr current_itr)
-        const {
-        for (auto& edge_label : current_itr->edges) {
-            auto itr = std::find_if (nodes.begin(), nodes.end(), [&edge_label] (const auto& node) {
-                return node.label == edge_label;
-            });
-
-            bool need_exploration = classify_arc (nodes, dfforest, itr, current_itr);
-            if (need_exploration) make_depth_first_forest (nodes, dfforest, itr);
-        }
-        current_itr->completed = true;
+        explore_depth_first (nodes, dfforest, itr - 1);
     }
 
     //   Mark the next connected node (T) as 'visited'
