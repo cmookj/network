@@ -13,8 +13,10 @@ proposed by R. E. Tarjan.  The example was introduced by D. E. Knuth during
 his Christmas lecture in 2024.
 
 Example problem:
+
 ![](figures/digraph.jpg)
 
 Depth-first forest of the digraph above:
+
 ![](figures/dff.jpg)
 
